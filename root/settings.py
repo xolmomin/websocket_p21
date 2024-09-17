@@ -110,7 +110,3 @@ CHANNEL_LAYERS = {
         },
     },
 }
-
-# apidoc
-# postman
-# https://websocketking.com
