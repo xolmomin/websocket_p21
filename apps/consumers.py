@@ -1,10 +1,17 @@
+from pyexpat.errors import messages
+
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.contrib.auth.models import User
 from django.forms import model_to_dict
 
+from apps.models import Message
+
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
     group_name = 'chat'
+
+    async def save_msg(self, msg: str) -> Message:
+        return await Message.objects.acreate(message=msg, author=self.user)
 
     async def check_user(self) -> None:
         if self.user.is_anonymous:
@@ -28,31 +35,25 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def receive_json(self, content, **kwargs):
         message = content["message"]
         # Send message to room group
+        msg = await self.save_msg(message)
+
         await self.channel_layer.group_send(
             self.group_name,
             {
                 "type": "chat.message",
-                "message": message,
+                "message": model_to_dict(msg, ['id', 'message']),
                 "from_user": model_to_dict(self.user, ['id', 'username']),
             }
         )
 
     # Receive message from room group
     async def chat_message(self, event):
-        message = event["message"]
         # Send message to WebSocket
         response = {
-            "message": message,
+            "message": event["message"]['message'],
             "from_user": event["from_user"]['username']
         }
         if self.user.id != event["from_user"]['id']:
             await self.send_json(response)
         else:
-            await self.send_json({'message': "xabar yetib bordi"})
-
-
-'''
-vaqt + db id
-status
-
-'''
+            await self.send_json(event['message'] | {"status": "xabar yuborildi"})
