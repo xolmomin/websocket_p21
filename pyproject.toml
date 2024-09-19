@@ -12,6 +12,8 @@ channels = "^4.1.0"
 daphne = "^4.1.2"
 channels-redis = "^4.2.0"
 ujson = "^5.10.0"
+djangorestframework-simplejwt = "^5.3.1"
+djangorestframework = "^3.15.2"
 
 
 [build-system]

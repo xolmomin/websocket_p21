@@ -1,3 +1,5 @@
-from django.db import models
+from django.db.models import Model, DateTimeField
 
-# Create your models here.
+
+class Message(Model):
+    created_at = DateTimeField(auto_now_add=True)
