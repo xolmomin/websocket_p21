@@ -19,6 +19,16 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             await self.disconnect(0)
             await self.close()
 
+    async def notify_status(self, is_connected: bool = True) -> None:
+        await self.channel_layer.group_send(
+            self.group_name,
+            {
+                "type": "chat.message",
+                "message": f"{self.user.username} is {('offline', 'online')[is_connected]} !",
+                "from_user": model_to_dict(self.user, ['id', 'username']),
+            }
+        )
+
     async def connect(self) -> None:
         self.user = self.scope['user']
         # Join room group
@@ -26,9 +36,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         await self.accept()
 
         await self.check_user()
+        await self.notify_status()
 
     async def disconnect(self, close_code):
         # Leave room group
+        await self.notify_status(False)
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     # Receive message from WebSocket
@@ -49,11 +61,13 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     # Receive message from room group
     async def chat_message(self, event):
         # Send message to WebSocket
+        msg = event["message"]['message'] if isinstance(event['message'], dict) else event['message']
         response = {
-            "message": event["message"]['message'],
+            "message": msg,
             "from_user": event["from_user"]['username']
         }
         if self.user.id != event["from_user"]['id']:
             await self.send_json(response)
         else:
-            await self.send_json(event['message'] | {"status": "xabar yuborildi"})
+            if isinstance(event['message'], dict):
+                await self.send_json(event['message'] | {"status": "xabar yuborildi"})
